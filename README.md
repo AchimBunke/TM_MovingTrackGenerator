@@ -57,3 +57,85 @@ Generate a Trackmania 2020 map using a configuration from the [Moving Track Conf
 - Small preview of map and item layout.
 
 ## Tutorial
+### Installation
+1. Install Openplanet Plugin *Moving Track Configurator*.  
+2. Download *Moving Track Generator* from [Releases](https://github.com/AchimBunke/TM_MovingTrackGenerator/releases).  
+3. Unzip the generator wherever.  
+### Use
+1. Open a map in the Trackmania Editor.
+2. Under Plugins/ open the Moving Track Configuration plugin.
+3. Place moving Items (Items that have a KinematicConstraint and allow animations).
+4. Select an item (e.g. Ctrl).
+5. Check the *Mark* checkbox or *Mark All Instances* if all items of the same model should be marked.  
+![image](https://github.com/user-attachments/assets/803c3687-2f75-4767-bab3-95f75a8348e3)  
+6. Configure the AABB properties to match the item. This box is used to later test against the player's driven path and calculate block arrival times. (Make sure it extends over the block so the player drives *through the box*).  
+![image](https://github.com/user-attachments/assets/29e697b8-cc2c-40e8-baff-dc67c64ae918)  
+7. Select one of the predefined Animation Orders. This determines the order of Sub-Animations.  
+![image](https://github.com/user-attachments/assets/2c65a53d-d23e-4418-9396-bb1d637bbb50)  
+8. Open the **Arrival Calculator** and check the *Track Arrivals* checkbox.  
+![image](https://github.com/user-attachments/assets/4fc9ea98-1603-4729-bd51-0c02bb97ab4b)  
+9. Enter TestMode and drive a path. Afterwards exit the TestMode and uncheck *Track Arrivals*. (So that the path is not overwritten the next time).  
+![image](https://github.com/user-attachments/assets/85a2c4de-a9a6-4aaf-af8d-7fe3641c93d7)  
+10. Under *Generation* click *Generate Arrivals*.  
+![image](https://github.com/user-attachments/assets/14af6ea0-477a-4192-a465-1aa46010a30d)  
+11. Adjust *Arrival Index*, *Arrival Time* or *Arrival Position* for each block if necessary.  
+![image](https://github.com/user-attachments/assets/6a9785e0-47a2-44ae-b34c-50edb5c04024)  
+12. Configure the animation properties for a selected block.  
+Each property can be a combination of fixed or calculated values. Use the dropdown to select the type of formula parameter:
+    - **Max:** The maximum value of the movement. (eg. animation up 30 units => Max = 30, Axis = Y)
+    - **Axis:** The axis of movement.
+    - **Wait 1 Duration:** The initial waiting duration (eg. Delay until player arrives).
+    - **Wait 1 Easing:** The initial waiting Easing function (Constant for waiting).
+    - **FlyIn:** Animation of movement from Max to 0).
+    - **FlyOut:** Animation of movement from 0 to Max.
+Operator Types:
+  - **Fixed:** A single static value.
+  - **Random:** Generator uses a random value from the provided parameters.
+    - **Avoid Arrival Dir:** Generator will not choose the direction from where the player is arriving from at this block.
+    - **Inside Var declarations, the random value is fixed across uses. The resulting Var value stays constant except with the use of arrival times!**
+  - **Arrival:** Generator will use the arrival time of the block this formula is used on.
+  - **Var:** Generator will use the value defined in the *Variables* section (Be careful of using vars as errors due to mismatched naming or types only occur in the generator).
+  - **Value From:** Takes the calculated result from a formula of another Sub-Animation that came **before** this Sub-Animation (Be careful to check with the Animation Order if the other Sub-Animation really came before it!).
+![image](https://github.com/user-attachments/assets/d3cd7fe8-fa8e-482f-9a4d-1e59898dc064)
+In this example:
+  - Translation is random between 10 and 40 units in a random direction except the one the player arrives from.
+  - Animation Order defines that the block will start at *Max* and after the wait will animate to its original position before inversing this motion.
+  - Initially i wait until 2 seconds before the player arrives (2 seconds from *moveTime* because the block needs time to move in position).
+  - The move to initial position in 2 seconds.
+  - Then wait between 1 and 3 seconds.
+  - Then animate back to *Max* translation using the same time as used in FlyIn.
+For Rotation I copied the values and just adjusted the Max value as it is a value of degrees.
+13. Copy this settings to all other instances of this Item Model.
+14. Under *Save/Load* these map-dependant settings can be saved. This will create a meta file next to the map file.
+![image](https://github.com/user-attachments/assets/f3f9eaf3-4276-440d-b24a-81c4aafa6b46)
+15. Start the **Moving Track Generator** from the unzipped directory.  
+![image](https://github.com/user-attachments/assets/b26487b9-4f8e-4334-b17c-41c562139924)
+16. On the right, set your Author name and select the Trackmania folder where your maps/items are saved. (Default: user\Documents\Trackmania). Adjust other folders as needed. Items will be generated into the *GeneratedItemsFolder* and maps into the *GeneratedMapsFolder*.
+17. Click *Start* to start a server that listens to the Openplanet plugin. It should say *Waiting for Connection* in the Console.
+18. From the Configurator Plugin under *Generation/* click *Send MapData to Server*.
+![image](https://github.com/user-attachments/assets/d0bafcf2-0d2e-4ef8-91e3-c5ab4fe545dd)
+if succesfull, there should now be information about the map like a preview of all marked items and an export path and name.
+![image](https://github.com/user-attachments/assets/c3eb2849-8eae-4cc2-8b90-f0262a6d3c56)  
+ItemsPrefix can be used to prevent conflicts when generating items from the same model in different generation steps (Generating from the same item model and map name twice will overwrite the first batch of generated items). As i only want to generate once we can leave it empty.
+19. **Make sure your map is saved from the Editor!! Items will only be generated from the map file!**
+20. Click *Generate*.
+![image](https://github.com/user-attachments/assets/32089b88-7324-405f-bc78-f569b47ca4ae)
+Green nodes indicate successfull generation and replacement. Check the logs for further details.
+21. If no errors occured, configure *Export Map Path* and click *Save*.
+22. **Restart Trackmania 2020!! New Items will not be loaded while its still running and you will get a *Missing Items* when opening the generated map otherwise.**
+23. Open the newly generated map (Export path) in the Editor. Each previously marked movable item should have been replaced by a variant executing the configured animation.
+**If the generation was faulty or another map should be generated, the original map can still be opened, the saved configuration loaded and the generation executed again. Just be aware that generating will possibly overwrite previously generated items depending on map name, item model and ItemsPrefix!**
+
+
+
+
+ 
+    
+
+
+
+  
+
+
+
+
