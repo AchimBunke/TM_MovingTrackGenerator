@@ -56,5 +56,4 @@ Generate a Trackmania 2020 map using a configuration from the [Moving Track Conf
 - Generating maps replacing items with its configured animated variant.
 - Small preview of map and item layout.
 
-  ## How?
-  
+## Tutorial
