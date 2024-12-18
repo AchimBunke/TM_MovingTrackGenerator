@@ -1,0 +1,46 @@
+﻿<UserControl x:Class="MovingTrackGenerator.UI.GenerationUI"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:mv="clr-namespace:MovingTrackGenerator"
+             xmlns:local="clr-namespace:MovingTrackGenerator.UI" xmlns:generation="clr-namespace:MovingTrackGenerator.Generation"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800"
+             DataContext="{x:Static mv:ComponentRegistry.MapGenerator}">
+    <UserControl.Resources>
+        <BooleanToVisibilityConverter x:Key="boolToVis"/>
+    </UserControl.Resources>
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition/>
+        </Grid.RowDefinitions>
+        <StackPanel Grid.Row="0">
+            <DockPanel>
+                <Label>Map Loaded:</Label>
+                <Label Content="{Binding CurrentMapName}"/>
+                <Label Margin="10,0,0,0" Content="{Binding CurrentMapPath}"/>
+            </DockPanel>
+            <DockPanel>
+                <TextBlock Width="130">Export Map Path:</TextBlock>
+                <TextBox Text="{Binding ExportMapPath}" Margin="10,0,0,0" />
+            </DockPanel>
+            <DockPanel>
+                <TextBlock Width="130">Generated Map Name:</TextBlock>
+                <TextBox Text="{Binding GeneratedMapName}" Margin="10,0,0,0" />
+            </DockPanel>
+            <DockPanel>
+                <TextBlock Width="130">ItemsPrefix:</TextBlock>
+                <TextBox Text="{Binding GeneratedItemsPrefix}" Margin="10,0,0,0" />
+            </DockPanel>
+        </StackPanel>
+        <DockPanel Grid.Row="1">
+            <DockPanel HorizontalAlignment="Center" LastChildFill="False">
+                <Button Content="Generate" Width="100" Height="100" Command="{Binding GenerateCommand}"/>
+                <Button Content="Save" Width="100" Height="100" Command="{Binding SaveCommand}"/>
+            </DockPanel>
+        </DockPanel>
+
+    </Grid>
+</UserControl>

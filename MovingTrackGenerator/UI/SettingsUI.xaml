@@ -1,0 +1,63 @@
+﻿<UserControl x:Class="MovingTrackGenerator.UI.SettingsUI"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:MovingTrackGenerator.UI"
+             xmlns:mv ="clr-namespace:MovingTrackGenerator"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800"
+             DataContext="{x:Static mv:ComponentRegistry.Settings}">
+    <Grid>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="Auto"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+        <StackPanel Grid.Column="0">
+            <TextBlock Text="Address" Height="20"/>
+            <TextBlock Text="Port" Height="20"/>
+            <Separator Margin="0,5,0,5"/>
+            <TextBlock Text="Author" Height="20"/>
+            <TextBlock Text="TrackmaniaFolder" Height="20"/>
+            <TextBlock Text="ItemsFolder" Height="20"/>
+            <TextBlock Text="GeneratedItemsFolder" Height="20"/>
+            <TextBlock Text="MapsFolder" Height="20"/>
+            <TextBlock Text="GeneratedMapsFolder" Height="20"/>
+        </StackPanel>
+        <StackPanel Grid.Column="1" Margin="3,0,0,0">
+            <DockPanel Height="20">
+                <TextBox Text="{Binding Path=Address}" />
+            </DockPanel>
+            <DockPanel Height="20">
+                <TextBox Text="{Binding Path=Port}" />
+            </DockPanel>
+            <Separator Margin="0,5,0,5"/>
+            <DockPanel Height="20">
+                <TextBox Text="{Binding Path=Author}" />
+            </DockPanel>
+            <DockPanel Height="20">
+                <Button Content="📁" Click="Button_Click1"/>
+                <TextBox Text="{Binding Path=TrackmaniaFolder}" />
+            </DockPanel>
+            <DockPanel Height="20">
+                <Button Content="📁" Click="Button_Click2"/>
+                <TextBox Text="{Binding Path=ItemsFolder}" />
+            </DockPanel>
+            <DockPanel Height="20">
+                <Button Content="📁" Click="Button_Click3"/>
+                <TextBox Text="{Binding Path=GeneratedItemsFolder}" />
+            </DockPanel>
+            <DockPanel Height="20">
+                <Button Content="📁" Click="Button_Click4"/>
+                <TextBox Text="{Binding Path=MapsFolder}" />
+            </DockPanel>
+            <DockPanel Height="20">
+                <Button Content="📁" Click="Button_Click5"/>
+                <TextBox Text="{Binding Path=GeneratedMapsFolder}" />
+            </DockPanel>
+            
+        </StackPanel>
+        
+      
+    </Grid>
+</UserControl>
