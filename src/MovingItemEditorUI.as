@@ -1,7 +1,7 @@
 namespace MovingItemEditorUI 
 {
-    const string MenuTitle = "Moving Track Configurator";
-    const string WindowTitle = "Moving Track Configurator";
+    const string MenuTitle = Icons::Sliders + " Moving Track Configurator";
+    const string WindowTitle = Icons::Sliders + " Moving Track Configurator";
 
     bool IsWindowOpen = false;
 
