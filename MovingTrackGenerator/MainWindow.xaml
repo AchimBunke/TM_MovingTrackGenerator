@@ -1,0 +1,35 @@
+﻿<Window x:Class="MovingTrackGenerator.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:local="clr-namespace:MovingTrackGenerator"
+        xmlns:ui="clr-namespace:MovingTrackGenerator.UI"
+        mc:Ignorable="d"
+        Title="Moving Blocks Editor" Height="450" Width="800"
+        Background="WhiteSmoke">
+    <Grid Margin="2">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition />
+            <ColumnDefinition Width="*" MinWidth="300"/>
+        </Grid.ColumnDefinitions>
+        <Grid Grid.Column="0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+            <ui:InfoOutputUI Grid.Row="0"/>
+            <ui:GenerationUI Grid.Row="1"/>
+
+        </Grid>
+
+        <StackPanel Grid.Column="2">
+            <ui:SettingsUI/>
+            <Separator/>
+            <ui:ConnectionUI/>
+            <Separator/>
+            <ui:TopDownPreview/>
+        </StackPanel>
+        
+    </Grid>
+</Window>
