@@ -1,0 +1,7 @@
+[meta]
+name        = "Moving Track Configurator"
+author      = "Achioto"
+category    = "Map Editor"
+version     = "0.1.0"
+[script]
+dependencies = [ "Camera" ]
