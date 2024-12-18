@@ -60,8 +60,10 @@ Generate a Trackmania 2020 map using a configuration from the [Moving Track Conf
 ### Installation
 1. Install Openplanet Plugin *Moving Track Configurator*.  
 2. Download *Moving Track Generator* from [Releases](https://github.com/AchimBunke/TM_MovingTrackGenerator/releases).  
-3. Unzip the generator wherever.  
+3. Unzip the generator wherever.
+   
 ### Use
+#### Generating Tracks with moving Items
 1. Open a map in the Trackmania Editor.
 2. Under Plugins/ open the Moving Track Configuration plugin.
 3. Place moving Items (Items that have a KinematicConstraint and allow animations).
@@ -125,6 +127,17 @@ Green nodes indicate successfull generation and replacement. Check the logs for 
 22. **Restart Trackmania 2020!! New Items will not be loaded while its still running and you will get a *Missing Items* when opening the generated map otherwise.**
 23. Open the newly generated map (Export path) in the Editor. Each previously marked movable item should have been replaced by a variant executing the configured animation.
 **If the generation was faulty or another map should be generated, the original map can still be opened, the saved configuration loaded and the generation executed again. Just be aware that generating will possibly overwrite previously generated items depending on map name, item model and ItemsPrefix!**
+
+#### Generating Items
+This tool can also be just used to generate different moving Items which then can be manually edited with **Editor++**.  
+For this just follow the step above, then open the generated map and modify the placed items.
+
+#### Multiple Generation steps and partial map Generation
+The **Copy To All** makes it very easy to share animation configuration across multiple items. But if a section of a map should not receive these configurations, you still have to copy/paste those onto each item.  
+This is why I recommend only marking sets of similar animated items, then generating a map replacing those instances, and then opening the genrated map and repeating this process.  
+This way, the configuration can easily be copied to all objects (marking objects is easier than copy/pasting configurations).  
+**But be careful when generating items using the same map name. An ItemPrefix has to be specified so that items in previous generation results are not overwritten!**
+
 
 
 
