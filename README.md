@@ -97,7 +97,7 @@ Operator Types:
     - **Inside Var declarations, the random value is fixed across uses. The resulting Var value stays constant except with the use of arrival times!**
   - **Arrival:** Generator will use the arrival time of the block this formula is used on.
   - **Var:** Generator will use the value defined in the *Variables* section (Be careful of using vars as errors due to mismatched naming or types only occur in the generator).
-  - **Value From:** Takes the calculated result from a formula of another Sub-Animation that came **before** this Sub-Animation (Be careful to check with the Animation Order if the other Sub-Animation really came before it!).
+  - **Value From:** Takes the calculated result from a formula of another Sub-Animation that came **before** this Sub-Animation (Be careful to check with the Animation Order if the other Sub-Animation really came before it!).  
 ![image](https://github.com/user-attachments/assets/d3cd7fe8-fa8e-482f-9a4d-1e59898dc064)  
 In this example:
   - Translation is random between 10 and 40 units in a random direction except the one the player arrives from.
@@ -108,19 +108,19 @@ In this example:
   - Then animate back to *Max* translation using the same time as used in FlyIn.
 For Rotation I copied the values and just adjusted the Max value as it is a value of degrees.
 13. Copy this settings to all other instances of this Item Model.
-14. Under *Save/Load* these map-dependant settings can be saved. This will create a meta file next to the map file.
+14. Under *Save/Load* these map-dependant settings can be saved. This will create a meta file next to the map file.  
 ![image](https://github.com/user-attachments/assets/f3f9eaf3-4276-440d-b24a-81c4aafa6b46)  
-15. Start the **Moving Track Generator** from the unzipped directory.  
+15. Start the **Moving Track Generator** from the unzipped directory.   
 ![image](https://github.com/user-attachments/assets/b26487b9-4f8e-4334-b17c-41c562139924)  
 16. On the right, set your Author name and select the Trackmania folder where your maps/items are saved. (Default: user\Documents\Trackmania). Adjust other folders as needed. Items will be generated into the *GeneratedItemsFolder* and maps into the *GeneratedMapsFolder*.
 17. Click *Start* to start a server that listens to the Openplanet plugin. It should say *Waiting for Connection* in the Console.
-18. From the Configurator Plugin under *Generation/* click *Send MapData to Server*.
+18. From the Configurator Plugin under *Generation/* click *Send MapData to Server*.  
 ![image](https://github.com/user-attachments/assets/d0bafcf2-0d2e-4ef8-91e3-c5ab4fe545dd)  
-if succesfull, there should now be information about the map like a preview of all marked items and an export path and name.
+if succesfull, there should now be information about the map like a preview of all marked items and an export path and name.  
 ![image](https://github.com/user-attachments/assets/c3eb2849-8eae-4cc2-8b90-f0262a6d3c56)   
 ItemsPrefix can be used to prevent conflicts when generating items from the same model in different generation steps (Generating from the same item model and map name twice will overwrite the first batch of generated items). As i only want to generate once we can leave it empty.
 19. **Make sure your map is saved from the Editor!! Items will only be generated from the map file!**
-20. Click *Generate*.
+20. Click *Generate*.  
 ![image](https://github.com/user-attachments/assets/32089b88-7324-405f-bc78-f569b47ca4ae)  
 Green nodes indicate successfull generation and replacement. Check the logs for further details.
 21. If no errors occured, configure *Export Map Path* and click *Save*.
