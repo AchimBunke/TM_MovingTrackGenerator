@@ -139,7 +139,17 @@ This way, the configuration can easily be copied to all objects (marking objects
 **But be careful when generating items using the same map name. An ItemPrefix has to be specified so that items in previous generation results are not overwritten!**
 
 
+# TODO
 
+- Add more sub-animation templates. (E.g. FlyIn -> FlyOut -> FlyIn -> FlyOut)
+- Item grouping for selection and copy/paste of animation settings.
+- Incremental generation from the same map. (instead of generating a new map, load and modify already existing generated map)
+- Better arrival route tracking. (E.g. integration of EditorRoute plugin)
+- Evaluate different schema for sub-animations (different from FlyIn, Wait, FlyOut) for more intuitive control.
+- Automatic moving item generation from static items.
+- Preview of generated animations in Configurator and Generator). (display of translation path and rotation as e.g. bounding volume to check for intersection with other items/route)
+- Make layout for animation configuration more intuitive.
+- Merge generator and configurator into standalone plugin.
 
 
  
