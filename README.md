@@ -141,6 +141,7 @@ This way, the configuration can easily be copied to all objects (marking objects
 
 # TODO
 
+- Fully disable plugin outside of Editor
 - Add more sub-animation templates. (E.g. FlyIn -> FlyOut -> FlyIn -> FlyOut)
 - Item grouping for selection and copy/paste of animation settings.
 - Incremental generation from the same map. (instead of generating a new map, load and modify already existing generated map)
