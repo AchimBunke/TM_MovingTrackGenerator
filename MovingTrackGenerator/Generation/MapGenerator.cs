@@ -62,8 +62,22 @@ namespace MovingTrackGenerator.Generation
         {
             return _mapData.mapName;
         }
+        string SanitizeFullPath(string fullPath)
+        {
+            string directory = Path.GetDirectoryName(fullPath); // Extract directory
+            string fileName = Path.GetFileName(fullPath);       // Extract file name
+
+            // Sanitize the file name only
+            foreach (char c in Path.GetInvalidFileNameChars())
+            {
+                fileName = fileName.Replace(c, '_');
+            }
+
+            // Combine sanitized file name with the original directory
+            return Path.Combine(directory, fileName);
+        }
         public string GetGeneratedItemFileName(string mapName, int generationIndex)
-            => Path.Combine(Settings.GeneratedItemsFolder, $"{GetMapName()}_{_generatedItemsPrefix}{generationIndex}.Item.Gbx");
+            => Path.Combine(Settings.GeneratedItemsFolder, $"{SanitizeFullPath(GetMapName())}_{_generatedItemsPrefix}{generationIndex}.Item.Gbx");
         public string GetGeneratedItemId(string mapName, int generationIndex)
             => Path.GetRelativePath(Settings.ItemsFolder, GetGeneratedItemFileName(mapName, generationIndex));
 
@@ -79,7 +93,7 @@ namespace MovingTrackGenerator.Generation
             get => _exportMapPath;
             set
             {
-                _exportMapPath = value;
+                _exportMapPath = SanitizeFullPath(value);
                 OnPropertyChanged(nameof(ExportMapPath));
             }
         }
