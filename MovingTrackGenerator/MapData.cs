@@ -1,4 +1,6 @@
-﻿using MovingTrackGenerator.Generation;
+﻿using Microsoft.VisualBasic;
+using MovingTrackGenerator.Generation;
+using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using static GBX.NET.Engines.Meta.NPlugDyna_SKinematicConstraint;
@@ -188,6 +190,7 @@ namespace MovingTrackGenerator
         public AnimationOrder animationOrder { get; set; }
         public AnimationData translationData { get; set; }
         public AnimationData rotationData { get; set; }
+        public bool isLocalSpace { get; set; }
     }
     public struct AnimationData
     {
@@ -617,12 +620,16 @@ namespace MovingTrackGenerator
         public static implicit operator GBX.NET.Vec3(Vec3 v) => new GBX.NET.Vec3(v.X, v.Y, v.Z);
         public static implicit operator Vec3((float x, float y, float z) c) => new Vec3() { Z = c.z, Y = c.y, X = c.x };
         public static implicit operator Vec3(GBX.NET.Vec3 v) => new Vec3() { X = v.X, Y = v.Y, Z = v.Z };
+        public static implicit operator Vec3(Vector3 v) => new Vec3() { X = v.X, Y = v.Y, Z = v.Z };
+        public static implicit operator Vector3(Vec3 v) => new Vector3(v.X, v.Y, v.Z);
 
         public static Vec3 operator +(Vec3 a, Vec3 b) => new Vec3 { X = a.X + b.X, Y = a.Y + b.Y, Z = a.Z + b.Z };
         public static Vec3 operator -(Vec3 a, Vec3 b) => new Vec3 { X = a.X - b.X, Y = a.Y - b.Y, Z = a.Z - b.Z };
         public static Vec3 operator *(Vec3 a, float b) => new Vec3 { X = a.X * b, Y = a.Y * b, Z = a.Z * b };
         public static Vec3 operator /(Vec3 a, float b) => new Vec3 { X = a.X / b, Y = a.Y / b, Z = a.Z / b };
 
+        public static bool operator ==(Vec3 a, Vec3 b) => a.X == b.X && a.Y == b.Y && a.Z == b.Z;
+        public static bool operator !=(Vec3 a, Vec3 b) => a.X != b.X || a.Y != b.Y || a.Z != b.Z;
         public override string ToString()
         {
             return $"({X}, {Y}, {Z})";

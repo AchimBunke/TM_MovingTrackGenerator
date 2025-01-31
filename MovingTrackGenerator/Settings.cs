@@ -128,7 +128,26 @@ namespace MovingTrackGenerator
             }
         }
 
-
+        public string GenerationInfoExportFolder
+        {
+            get => Properties.Settings.Default.GenerationInfoExportFolder;
+            set
+            {
+                Properties.Settings.Default.GenerationInfoExportFolder = value;
+                Properties.Settings.Default.Save();
+                OnPropertyChanged(nameof(GenerationInfoExportFolder));
+            }
+        }
+        public bool IsGenerationInfoExportEnabled
+        {
+            get => Properties.Settings.Default.IsGenerationInfoExportEnabled;
+            set
+            {
+                Properties.Settings.Default.IsGenerationInfoExportEnabled = value;
+                Properties.Settings.Default.Save();
+                OnPropertyChanged(nameof(IsGenerationInfoExportEnabled));
+            }
+        }
         public void ResetToDefault()
         {
             Address = default_Address;

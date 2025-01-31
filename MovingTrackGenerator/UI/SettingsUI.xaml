@@ -23,6 +23,7 @@
             <TextBlock Text="GeneratedItemsFolder" Height="20"/>
             <TextBlock Text="MapsFolder" Height="20"/>
             <TextBlock Text="GeneratedMapsFolder" Height="20"/>
+            <TextBlock Text="Gen. Info Export Path" Height="20"/>
         </StackPanel>
         <StackPanel Grid.Column="1" Margin="3,0,0,0">
             <DockPanel Height="20">
@@ -55,7 +56,13 @@
                 <Button Content="📁" Click="Button_Click5"/>
                 <TextBox Text="{Binding Path=GeneratedMapsFolder}" />
             </DockPanel>
-            
+
+            <DockPanel Height="20">
+                <Button Content="📁" Click="Button_Click6"/>
+                <CheckBox IsChecked="{Binding IsGenerationInfoExportEnabled}" VerticalAlignment="Center"/>
+                <TextBox Text="{Binding Path=GenerationInfoExportFolder}" />
+            </DockPanel>
+
         </StackPanel>
         
       
