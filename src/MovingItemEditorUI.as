@@ -7,9 +7,11 @@ namespace MovingItemEditorUI
 
     // Menu Item under 'Plugins'
     void RenderMenu(){
+        UI::BeginDisabled(MBEditor::EditorIsNull());
         if(UI::MenuItem(MenuTitle, "",IsWindowOpen)){
             IsWindowOpen = !IsWindowOpen;
         }
+        UI::EndDisabled();
     }
 
     // Menu Window

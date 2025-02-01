@@ -1,11 +1,11 @@
 namespace ExtraUI
 {
-    int NumberInputWidth = 110;
+    int NumberInputWidth = 130;
     int OperatorInputWidth = 45;
-    int OperantTypeInputWidth = 100;
+    int OperantTypeInputWidth = 110;
     int AxisInputWidth = 45;
     int EasingInputWidth = 150;
-    int VarInputWidth = 75;
+    int VarInputWidth = 100;
 
     
 
@@ -634,6 +634,48 @@ namespace ExtraUI
         UI::PopID();
     }
 
+    void GroupingUI(){
+        if(UI::CollapsingHeader("Grouping")){
+            GroupCreationInput();
+            for(uint i=0;i < Generation::groupNames.Length; i++){
+                UI::Text(Generation::groupNames[i]);
+            }
+        }
+    }
+    string currentGroupInput;
+    void GroupCreationInput(){
+        currentGroupInput = UI::InputText("Group Name",currentGroupInput);
+        UI::BeginDisabled(currentGroupInput == "" || Generation::groupNames.Find(currentGroupInput) >= 0);
+        UI::SameLine();
+        if(UI::Button("+")){
+            Generation::groupNames.InsertLast(currentGroupInput);
+        }
+        UI::SetTooltip("Creates a new group.");
+        UI::EndDisabled();
+    }
+    void GroupDropDown(Generation::BlockData@ blockData){
+        UI::PushID(blockData);
+        UI::SetNextItemWidth(250);
+        if(UI::BeginCombo("Group", blockData.group)){
+            if(UI::Selectable("<NONE>", blockData.group == "")){
+                blockData.group = "";
+            }
+            for(uint i=0;i < Generation::groupNames.Length; i++){
+                if(UI::Selectable(Generation::groupNames[i], blockData.group == Generation::groupNames[i])){
+                    blockData.group = Generation::groupNames[i];
+                }
+            }
+            UI::EndCombo();
+        }
+        UI::PopID();
+    }
+
+    void LocalAnimationDropDown(Generation::BlockAnimationData@ animData){
+        UI::PushID(animData);
+        animData.localAnimation = UI::Checkbox("Local Space", animData.localAnimation);
+        UI::SetItemTooltip("Generate animation data in local space.");
+        UI::PopID();
+    }
 
 
 

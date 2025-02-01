@@ -2,6 +2,6 @@
 name        = "Moving Track Configurator"
 author      = "Achioto"
 category    = "Map Editor"
-version     = "0.1.0"
+version     = "0.1.1"
 [script]
 dependencies = [ "Camera" ]
