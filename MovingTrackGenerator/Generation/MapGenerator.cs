@@ -16,6 +16,7 @@ using static GBX.NET.Engines.Meta.NPlugDyna_SKinematicConstraint;
 using static GBX.NET.Engines.Plug.CPlugPrefab;
 using static GBX.NET.Engines.Plug.CPlugSurface.Mesh;
 using static GBX.NET.Engines.Plug.CPlugSurface;
+using System;
 
 namespace MovingTrackGenerator.Generation
 {
@@ -83,7 +84,7 @@ namespace MovingTrackGenerator.Generation
             return Path.Combine(directory, fileName);
         }
         public string GetGeneratedItemFileName(string mapName, int generationIndex)
-            => Path.Combine(Settings.GeneratedItemsFolder, $"{SanitizeFullPath(GetMapName())}_{_generatedItemsPrefix}{generationIndex}.Item.Gbx");
+            => Path.Combine(Settings.GeneratedItemsFolder, SanitizeFullPath(GetMapName()),$"{_generatedItemsPrefix}{generationIndex}.Item.Gbx");
         public string GetGeneratedItemId(string mapName, int generationIndex)
             => Path.GetRelativePath(Settings.ItemsFolder, GetGeneratedItemFileName(mapName, generationIndex));
 
@@ -203,7 +204,7 @@ namespace MovingTrackGenerator.Generation
                         ComponentRegistry.InfoOutput.WriteLine($"Generating animation data for item: {newItemId}");
                         bool wasAnimationGenerated = GenerateAnimations(originalItem, correspondingItem, genItemInfo, anchoredItem);
 
-                        string exportFolder = Settings.GeneratedItemsFolder;
+                        string exportFolder = Path.GetDirectoryName(exportFileName);
                         if (!Directory.Exists(exportFolder))
                         {
                             ComponentRegistry.InfoOutput.WriteLine($"Directory for generated items does not exist! Creating one.");
@@ -286,36 +287,30 @@ namespace MovingTrackGenerator.Generation
             entRef = null;
             return null;
         }
-        private Vector3 ApplyEulerRotation(Vector3 point, Vector3 euler)
+        public static Vector3 Rotate(Vector3 position, Vector3 pitchYawRoll)
         {
-            float cosX = (float)Math.Cos(euler.X), sinX = (float)Math.Sin(euler.X);
-            float cosY = (float)Math.Cos(euler.Y), sinY = (float)Math.Sin(euler.Y);
-            float cosZ = (float)Math.Cos(euler.Z), sinZ = (float)Math.Sin(euler.Z);
 
-            // Rotation around X-axis
-            float y1 = cosX * point.Y - sinX * point.Z;
-            float z1 = sinX * point.Y + cosX * point.Z;
+            // Create quaternion from pitch, yaw, and roll (Euler Angles)
+            var rotationQuat = Quaternion.CreateFromYawPitchRoll(pitchYawRoll.X, pitchYawRoll.Y, pitchYawRoll.Z);
 
-            // Rotation around Y-axis
-            float x2 = cosY * point.X + sinY * z1;
-            float z2 = -sinY * point.X + cosY * z1;
+            // Apply rotation to position (multiply vector by quaternion)
+            Vector3 rotatedPosition = Vector3.Transform(position, rotationQuat);
 
-            // Rotation around Z-axis
-            float x3 = cosZ * x2 - sinZ * y1;
-            float y3 = sinZ * x2 + cosZ * y1;
-
-            return new Vector3(x3, y3, z2);
+            return rotatedPosition;
         }
+
         void SetAnchorRotationForItemModel(CGameCtnAnchoredObject anchoredItem, Gbx<CGameItemModel> itemModel)
         {
             var originalDynaObjectModel = FindDynaObjectModel(itemModel, out var dynaEnt);
             // TODO: maybe copy?
             Vec3 pitchYawRoll = anchoredItem.PitchYawRoll;
-            if(pitchYawRoll == (0,0,0))
+            //TODO: Pitch and Yaw are swapped?
+            //pitchYawRoll = (pitchYawRoll.Y, pitchYawRoll.X, pitchYawRoll.Z);
+            Vec3 position = anchoredItem.AbsolutePositionInMap;
+            if (pitchYawRoll == (0,0,0))
             {
                 return;
             }
-            Vec3 rotationEuler = (-pitchYawRoll.X, -pitchYawRoll.Y, -pitchYawRoll.Z);
             var mesh = originalDynaObjectModel.Mesh;
 
             foreach (CPlugVisualIndexedTriangles visual in mesh.Visuals)
@@ -323,11 +318,13 @@ namespace MovingTrackGenerator.Generation
                 for (int i = 0; i < visual.VertexStreams[0].Positions.Length; ++i)
                 {
                     Vec3 p = visual.VertexStreams[0].Positions[i];
-                    Vec3 rotated = ApplyEulerRotation(p, rotationEuler);
+                    Vec3 rotated = Rotate(p, pitchYawRoll);
+                    //Vec3 translated = rotated - position;
                     visual.VertexStreams[0].Positions[i] = rotated;
                 }
             }
             anchoredItem.PitchYawRoll = (0, 0, 0);
+            //anchoredItem.AbsolutePositionInMap = (0,0,0);
         }
 
         bool GenerateAnimations(Gbx<CGameItemModel> itemModel, BlockData blockData, GeneratedItemInfo genItemInfo, CGameCtnAnchoredObject anchoredItem)
