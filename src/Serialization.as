@@ -23,23 +23,23 @@ namespace Serialization
     }
     string GetCurrentMapGenerationFilePathRelative(){
         if(MapGenerationFilePath.Length == 0){
-            auto generationPath = GetCurrentMapPath() + GetCurrentMapName() + "_mov-generated.Map.Gbx";
+            auto generationPath = Path::Join(GetCurrentMapPath(), Path::Join(GetCurrentMapName(),"_mov-generated.Map.Gbx"));
             MapGenerationFilePath = generationPath;
         }
         return MapGenerationFilePath;
     }
     string GetCurrentMapPathAbsolute(){
-        return IO::FromUserGameFolder("Maps\\" + GetCurrentMapPath());
+        return IO::FromUserGameFolder(Path::Join("Maps", GetCurrentMapPath()));
     }
     string GetCurrentMapGenerationFilePathAbsolute(){
-        return IO::FromUserGameFolder("Maps\\" + GetCurrentMapGenerationFilePathRelative());
+        return IO::FromUserGameFolder(Path::Join("Maps", GetCurrentMapGenerationFilePathRelative()));
     }
     void SetMapGenerationFilePathRelative(const string &in generationFilePath){
         MapGenerationFilePath = generationFilePath;
     }
     string GetCurrentItemGenerationPathRelative(){
         if(ItemGenerationPath.Length == 0){
-            auto generationPath = GetCurrentMapName() + "\\";
+            auto generationPath = GetCurrentMapName();
             ItemGenerationPath = generationPath;
         }
         return ItemGenerationPath;
@@ -49,7 +49,7 @@ namespace Serialization
     }
 
     string GetCurrentItemGenerationFolderAbsolute(){
-        return IO::FromUserGameFolder("Items\\" + GetCurrentItemGenerationPathRelative());
+        return IO::FromUserGameFolder(Path::Join("Items", GetCurrentItemGenerationPathRelative()));
     }
     string GetOrCreateCurrentItemGenerationFolderAbsolute(){
         auto path = GetCurrentItemGenerationFolderAbsolute();
@@ -58,9 +58,12 @@ namespace Serialization
         }
         return path;
     }
-
+    string GetCurrentMetaDataFolderPathAbsolute()
+    {
+        return IO::FromStorageFolder(Path::GetDirectoryName(GetCurrentMetaDataFilePath()));
+    }
     string GetCurrentMetaDataFilePath(){
-        return GetCurrentMapPathAbsolute()+ GetCurrentMapName() + ".meta";
+        return Path::Join("Saved", Path::Join(GetCurrentMapPath(), Path::SanitizeFileName(GetCurrentMapName()) + ".meta"));
     }
 
     class MapMetaData{
@@ -73,8 +76,9 @@ namespace Serialization
         array<Generation::VarAxisDeclaration@> axisVars;
         array<Generation::VarEasingDeclaration@> easingVars;
         ArrivalCalculator::Arrivals@ arrivals;
+        array<const string> groupNames;
     }
-    string GetSerializeMapData(){
+    Json::Value GetSerializeMapData(){
         MapMetaData metaData;
         if(ArrivalCalculator::CurrentArrivals is null){
             @ArrivalCalculator::CurrentArrivals = ArrivalCalculator::Arrivals();
@@ -82,6 +86,7 @@ namespace Serialization
         @metaData.arrivals = ArrivalCalculator::CurrentArrivals;
         @metaData.blocks = Generation::blocks;
         @metaData.aaBBs = Generation::aaBBs;
+        metaData.groupNames = Generation::groupNames;
         metaData.intVars = Generation::intVars;
         metaData.floatVars = Generation::floatVars;
         metaData.axisVars = Generation::axisVars;
@@ -92,22 +97,26 @@ namespace Serialization
         metaData.mapPath = GetCurrentMapFile();
 
         auto jsonObject = MapMetaDataJson(metaData);
-        return Json::Write(jsonObject);
+        return jsonObject;
     }
     void SerializeMapData(){
-        string path = GetCurrentMetaDataFilePath();
-        string data = GetSerializeMapData();
+        string path = IO::FromStorageFolder(GetCurrentMetaDataFilePath());
+        auto data = GetSerializeMapData();
+        //Json::ToFile(path, data);
+        string folderPath = Path::GetDirectoryName(path);
+        
+        if(!IO::FolderExists(folderPath)){
+            IO::CreateFolder(folderPath);
+        }
 
-        IO::File file;
-        file.Open(path, IO::FileMode::Write);
-        file.Write(data);
-        file.Flush();
-        file.Close();
+        Json::ToFile(path, data);
     }
     void LoadMapData(){
-        string path = GetCurrentMetaDataFilePath();
+        Selection::ResetSelection();
+        string path = IO::FromStorageFolder(GetCurrentMetaDataFilePath());
         if(!IO::FileExists(path)){
             warn("Map data file does not exist!");
+            return;
         }
         auto json = Json::FromFile(path);
         MapMetaData metaData = JsonMapMetaData(json);
@@ -122,6 +131,9 @@ namespace Serialization
         }
         if(!(metaData.aaBBs is null)){
             LoadAABBs(metaData.aaBBs);
+        }
+        if(!(metaData.groupNames is null)){
+            LoadGroupNames(metaData.groupNames);
         }
         if(!(metaData.intVars is null)){
             Generation::intVars = metaData.intVars;
@@ -149,6 +161,12 @@ namespace Serialization
                 continue;
             }
             Generation::SetBlock(block);
+        }
+    }
+    void LoadGroupNames(array<const string> groupNames){
+        Generation::groupNames.Resize(0);
+        for(uint i=0;i< groupNames.Length; i++){
+            Generation::groupNames.InsertLast(groupNames[i]);
         }
     }
     void LoadAABBs(dictionary@ aaBBs)
@@ -227,6 +245,7 @@ namespace Serialization
         jsonObject["playerArrivalIndex"] = block.playerArrivalIndex;
         jsonObject["serializedPositionInWorld"] = Vec3Json(block.anchoredObject.AbsolutePositionInMap);
         jsonObject["fullAnimationData"] = BlockAnimationDataJson(block.fullAnimationData);
+        jsonObject["group"] = block.group;
         return jsonObject;
     }
     Generation::BlockData@ JsonBlock(Json::Value@ json){
@@ -238,6 +257,7 @@ namespace Serialization
         block.playerArrivalIndex = json["playerArrivalIndex"];
         block.serializedPositionInWorld = JsonVec3(json["serializedPositionInWorld"]);
         @block.fullAnimationData = JsonBlockAnimationData(json["fullAnimationData"]);
+        block.group = json["group"];
         return block;
     }
 
@@ -248,6 +268,7 @@ namespace Serialization
         jsonObject["animationOrder"] = data.animationOrder;
         jsonObject["translationData"] = AnimationDataJson(data.translationData);
         jsonObject["rotationData"] = AnimationDataJson(data.rotationData);
+        jsonObject["isLocalSpace"] = data.localAnimation;
         return jsonObject;
    }
    Generation::BlockAnimationData@ JsonBlockAnimationData(Json::Value@ json){
@@ -255,6 +276,7 @@ namespace Serialization
         @animData.translationData = JsonAnimationData(json["translationData"]);
         @animData.rotationData = JsonAnimationData(json["rotationData"]);
         animData.animationOrder = Generation::AnimationOrder(int(json["animationOrder"]));
+        animData.localAnimation = bool(json["isLocalSpace"]);
         return animData;
     }
    Json::Value@ AnimationDataJson(Generation::AnimationData@ data)
@@ -293,6 +315,7 @@ namespace Serialization
 
         @animData.FlyOutDurationFormula = JsonFormulaInt(json["flyOutDurationFormula"]);
         @animData.FlyOutEasingFormula = JsonFormulaEasing(json["flyOutEasingFormula"]);
+
         return animData;
     }
 
@@ -638,6 +661,12 @@ namespace Serialization
         }
         jsonObject["easingVars"] = easingVarsArray;
 
+        Json::Value groupNamesArray = Json::Array();
+        for(uint i=0;i < mapMetaData.groupNames.Length; i++){
+            groupNamesArray.Add(mapMetaData.groupNames[i]);
+        }
+        jsonObject["groupNames"] = groupNamesArray;
+
         return jsonObject;
     }
     MapMetaData@ JsonMapMetaData(Json::Value@ json){
@@ -679,9 +708,14 @@ namespace Serialization
             metaData.easingVars.InsertLast(JsonVarEasingDeclaration(easingVarArray[i]));
         }
 
+        Json::Value groupNamesArray = json["groupNames"];
+        for(uint i=0;i < groupNamesArray.Length; i++){
+            metaData.groupNames.InsertLast(groupNamesArray[i]);
+        }
+
+
         return metaData;
     }
-
 
    
 }

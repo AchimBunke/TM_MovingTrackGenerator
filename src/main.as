@@ -26,6 +26,8 @@ void Render(){
       Generation::DrawInfosForSelectedItem();
       Generation::DrawArrivalTimes();
       KeyInputControl::Tick();
+      Selection::TickMultiSelect();
+      Selection::DrawMultiSelectedItemIndicators();
    }
    ArrivalCalculator::Tick();
    if(ArrivalCalculator::CanRecord() && ArrivalCalculator::IsTrackingArrivals){
@@ -37,6 +39,10 @@ void Render(){
 }
 
 void RenderInterface(){
+   if(MBEditor::EditorIsNull())
+   {
+      return;
+   }
    MovingItemEditorUI::Show();
 }
 void RenderMenu(){

@@ -1,11 +1,18 @@
 namespace KeyInputControl
 {
+    bool isCtrlDown;
+
     UI::Key markKey = UI::Key::M;
     bool markKeyPressed;
 
+    UI::Key multiSelectKey = UI::Key::N;
+    bool multiSelectPressed;
+
 
     void Tick(){
-        if(UI::IsKeyPressed(markKey) && !markKeyPressed){
+        isCtrlDown = UI::IsKeyDown(UI::Key::LeftCtrl);
+
+        if(UI::IsKeyPressed(markKey) && isCtrlDown  && !markKeyPressed){
             markKeyPressed = true;
             if(Selection::IsItemPicked){
                 if(Generation::IsMarked(Selection::PickedObject)){
@@ -19,6 +26,13 @@ namespace KeyInputControl
         }
         if(UI::IsKeyReleased(markKey)){
             markKeyPressed = false;
+        }
+
+        if(UI::IsKeyPressed(multiSelectKey) && isCtrlDown && !multiSelectPressed){
+            Selection::StartMultiSelection();
+        }
+        if(UI::IsKeyReleased(multiSelectKey)){
+            Selection::EndMultiSelection();
         }
     }
 }

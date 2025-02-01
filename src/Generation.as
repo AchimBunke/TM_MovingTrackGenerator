@@ -456,12 +456,15 @@ namespace Generation
         // Only for deserialization
         vec3 serializedPositionInWorld;
 
+        string group = "";
+
 
     }
     BlockAnimationData@ blockAnimationDataCopy;
 
     class BlockAnimationData{
         AnimationOrder animationOrder;
+        bool localAnimation;
         AnimationData@ translationData;
         AnimationData@ rotationData;
         BlockAnimationData(){
@@ -472,6 +475,7 @@ namespace Generation
             animationOrder = other.animationOrder;
             @translationData = AnimationData(other.translationData);
             @rotationData = AnimationData(other.rotationData);
+            localAnimation = other.localAnimation;
         }
 
     }
@@ -537,6 +541,8 @@ namespace Generation
     array<VarFloatDeclaration@> floatVars;
     array<VarAxisDeclaration@> axisVars;
     array<VarEasingDeclaration@> easingVars;
+
+    array<const string> groupNames;
 
     void MarkObject(CGameCtnAnchoredObject@ obj){
         if(IsMarked(obj))
@@ -624,9 +630,10 @@ namespace Generation
     void UnMark(CGameCtnAnchoredObject@ obj){
         int idx;
         if((idx = markedObjects.FindByRef(obj)) >= 0){
+            auto id = GetId(obj);
             markedObjects.RemoveAt(idx);
             objectIds.RemoveAt(idx);
-            blocks.Delete(GetStringId(idx));
+            blocks.Delete(GetStringId(id));
         }
     }
 
@@ -650,6 +657,26 @@ namespace Generation
                 if(!IsMarked(anchoredItems[i])){
                     MarkObject(anchoredItems[i]);
                 }
+            }
+        }
+    }
+
+    void MarkMultiSelectedItems(){
+        for(uint i= 0; i< Selection::multiSelectedObjects.Length; i++){
+            if(!IsMarked(Selection::multiSelectedObjects[i])){
+                MarkObject(Selection::multiSelectedObjects[i]);
+            }   
+        }
+    }
+
+    void CreateGroup(const string &in groupName){
+        groupNames.InsertLast(groupName);
+    }
+    void AddItemsToGroup(const string &in groupName, array<CGameCtnAnchoredObject@> objects){
+        for(uint i=0;i < objects.Length; i++){
+            if(IsMarked(objects[i])){
+                auto block = cast<BlockData@>(blocks[GetStringId(GetId(objects[i]))]);
+                block.group = groupName;
             }
         }
     }
@@ -746,7 +773,13 @@ namespace Generation
     const vec4 AABBStrokeColor = vec4(0,1,0,1);
     const float AABBStrokeWidth = 2;
     void DrawAABB(CGameCtnAnchoredObject@ obj){
+        if(obj is null){
+            return;
+        }
         auto itemModel = obj.ItemModel;
+        if(itemModel is null){
+            return;
+        }
         string id = itemModel.IdName;
         auto aaBB = GetAABB(id);
         auto aaBBSize = aaBB.size;
@@ -801,7 +834,7 @@ namespace Generation
         // generate time and position when a player begins to hit/move over the block
         //  from the current arrivals
         void GeneratePlayerArrivals(){
-            if(ArrivalCalculator::CurrentArrivals is null){
+            if(ArrivalCalculator::CurrentArrivals is null || ArrivalCalculator::CurrentArrivals.entries is null || ArrivalCalculator::CurrentArrivals.entries.IsEmpty()){
                 return;
             }
             auto keys = blocks.GetKeys();
@@ -895,7 +928,13 @@ namespace Generation
         }
         auto id = GetId(selectedItem);
         BlockData@ blockData = cast<BlockData@>(blocks[GetStringId(id)]);
+        if(blockData is null)
+        {
+            return;
+        }
         ExtraUI::AnimationOrderSelectionDropdown(blockData.fullAnimationData);
+        UI::SameLine();
+        ExtraUI::LocalAnimationDropDown(blockData.fullAnimationData);
         if(UI::CollapsingHeader("Translation Generation Settings"))
         {
             if(UI::Button("Copy from Rotation")){
@@ -918,18 +957,18 @@ namespace Generation
         if(UI::Button("Copy")){
             @blockAnimationDataCopy = BlockAnimationData(blockData.fullAnimationData);
         }
-        UI::SetTooltip("Copy the translation, rotation and AABB settings.");
+        UI::SetTooltip("Copy the animation settings.");
 
         UI::SameLine();
         UI::BeginDisabled(blockAnimationDataCopy is null);
         if(UI::Button("Paste")){
             @blockData.fullAnimationData = BlockAnimationData(blockAnimationDataCopy);
         }
-        UI::SetTooltip("Copy the translation, rotation and AABB settings.");
+        UI::SetTooltip("Paste the animation settings.");
         UI::EndDisabled();
 
         UI::SameLine();
-        if(UI::Button("Copy to instances")){
+        if(UI::Button("Copy to Instances")){
             auto keys = blocks.GetKeys();
             for(uint i=0;i < keys.Length; i++){
                 auto targetBlockData = cast<BlockData@>(blocks[keys[i]]);
@@ -938,16 +977,33 @@ namespace Generation
                 }
             }
         }
-        UI::SetTooltip("Copy the translation, rotation and AABB settings to all items with the same item model.");
+        UI::SetTooltip("Copy the animation settings to all items with the same item model.");
+
         UI::SameLine();
-        if(UI::Button("Copy to all")){
+        UI::BeginDisabled(blockData.group == "");
+        if(UI::Button("Copy to Group")){
+            auto keys = blocks.GetKeys();
+            for(uint i=0;i < keys.Length; i++){
+                auto targetBlockData = cast<BlockData@>(blocks[keys[i]]);
+                if(targetBlockData.group == blockData.group){
+                    CopyGenerationSettings(blockData, targetBlockData);
+                }
+            }
+        }
+        UI::SetTooltip("Copy the animation settings to all other items in the same group.");
+        UI::EndDisabled();
+
+        UI::SameLine();
+        if(UI::Button("Copy to All")){
             auto keys = blocks.GetKeys();
             for(uint i=0;i < keys.Length; i++){
                 auto targetBlockData = cast<BlockData@>(blocks[keys[i]]);
                 CopyGenerationSettings(blockData, targetBlockData);
             }
         }
-        UI::SetTooltip("Copy the translation, rotation and AABB settings to all other items.");
+        UI::SetTooltip("Copy the animation settings to all other items.");
+
+       
         
       
     }

@@ -43,8 +43,8 @@ namespace Client
     }
 
     void SendMapData(){
-        StartConnecting();
-        Send(Serialization::GetSerializeMapData());
+        StartConnecting();    
+        Send(Json::Write(Serialization::GetSerializeMapData()));
         EndConnection();
     }
     void ShowUI(){
