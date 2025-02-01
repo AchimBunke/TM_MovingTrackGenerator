@@ -138,7 +138,15 @@ This is why I recommend only marking sets of similar animated items, then genera
 This way, the configuration can easily be copied to all objects (marking objects is easier than copy/pasting configurations).  
 **But be careful when generating items using the same map name. An ItemPrefix has to be specified so that items in previous generation results are not overwritten!**
 
-
+# New Features (0.1.1)
+## Configurator
+- Item multi selection
+- Item grouping for quick animation settings sharing
+- [Experimental] Toggle for local and global space animations. (Move items relative to orientation or map)
+## Generator
+- Global space generation will manipulate mesh data so that default orientation matches the original item instance in the provided map file. **This might drastically change the collider and bounding box. Check after generation if item collisions are as expected!**
+- Added optional output for data of the generated items and map file. Can be used as input for future generation tools.
+- 
 # TODO
 
 - Fully disable plugin outside of Editor
