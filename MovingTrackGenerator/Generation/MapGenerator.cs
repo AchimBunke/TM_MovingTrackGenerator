@@ -3,13 +3,20 @@ using GBX.NET.Engines.Game;
 using GBX.NET.Engines.GameData;
 using GBX.NET.Engines.Meta;
 using GBX.NET.Engines.Plug;
+using GBX.NET.Inputs;
 using GBX.NET.LZO;
 using System.ComponentModel;
 using System.IO;
+using System.Numerics;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using System.Windows;
 using System.Windows.Input;
 using static GBX.NET.Engines.Meta.NPlugDyna_SKinematicConstraint;
 using static GBX.NET.Engines.Plug.CPlugPrefab;
+using static GBX.NET.Engines.Plug.CPlugSurface.Mesh;
+using static GBX.NET.Engines.Plug.CPlugSurface;
+using System;
 
 namespace MovingTrackGenerator.Generation
 {
@@ -62,8 +69,22 @@ namespace MovingTrackGenerator.Generation
         {
             return _mapData.mapName;
         }
+        string SanitizeFullPath(string fullPath)
+        {
+            string directory = Path.GetDirectoryName(fullPath); // Extract directory
+            string fileName = Path.GetFileName(fullPath);       // Extract file name
+
+            // Sanitize the file name only
+            foreach (char c in Path.GetInvalidFileNameChars())
+            {
+                fileName = fileName.Replace(c, '_');
+            }
+
+            // Combine sanitized file name with the original directory
+            return Path.Combine(directory, fileName);
+        }
         public string GetGeneratedItemFileName(string mapName, int generationIndex)
-            => Path.Combine(Settings.GeneratedItemsFolder, $"{GetMapName()}_{_generatedItemsPrefix}{generationIndex}.Item.Gbx");
+            => Path.Combine(Settings.GeneratedItemsFolder, SanitizeFullPath(GetMapName()),$"{_generatedItemsPrefix}{generationIndex}.Item.Gbx");
         public string GetGeneratedItemId(string mapName, int generationIndex)
             => Path.GetRelativePath(Settings.ItemsFolder, GetGeneratedItemFileName(mapName, generationIndex));
 
@@ -79,7 +100,7 @@ namespace MovingTrackGenerator.Generation
             get => _exportMapPath;
             set
             {
-                _exportMapPath = value;
+                _exportMapPath = SanitizeFullPath(value);
                 OnPropertyChanged(nameof(ExportMapPath));
             }
         }
@@ -115,6 +136,12 @@ namespace MovingTrackGenerator.Generation
             ComponentRegistry.InfoOutput.WriteLine($"Saving generated map at {ExportMapPath}");
             currentMap.MapName = GeneratedMapName;
             currentMap.Save(ExportMapPath);
+
+            genInfo.GeneratedMapPath = ExportMapPath;
+            genInfo.GeneratedMapName = GeneratedMapName;
+
+            SaveGenerationInfo(genInfo);
+
             ComponentRegistry.InfoOutput.Highlight($"Saved successfully. Restart Trackmania to load generated items!");
         }
 
@@ -125,14 +152,20 @@ namespace MovingTrackGenerator.Generation
         }
 
         public event Action<Dictionary<int, BlockStatus>, bool> Generated;
+        GenerationInfo genInfo;
         public void Generate()
         {
             Dictionary<int, BlockStatus> blockStatus = new();
+            genInfo = new GenerationInfo();
             try
             {
                 Gbx.LZO = new Lzo();
                 ComponentRegistry.InfoOutput.Highlight("-- Starting Map Generation --");
                 var gbx = Gbx.Parse<CGameCtnChallenge>(Path.Combine(Settings.MapsFolder, _mapData.mapPath), GbxReadSettings);
+                genInfo.Author = Settings.Author;
+                genInfo.OriginalMapPath = Path.Combine(Settings.MapsFolder, _mapData.mapPath);
+                genInfo.OriginalMapName = _mapData.mapName;
+                genInfo.GeneratedItemsFolder = Settings.GeneratedItemsFolder;
                 ComponentRegistry.InfoOutput.WriteLine($"Open Map: {Path.Combine(Settings.MapsFolder,_mapData.mapPath)}");
                 currentMap = gbx.Node;
                 int generatedItemCount = 0;
@@ -157,15 +190,21 @@ namespace MovingTrackGenerator.Generation
                     string exportFileName = GetGeneratedItemFileName(_mapData.mapName, generatedItemCount);
                     string newItemId = GetGeneratedItemId(_mapData.mapName, generatedItemCount);
 
+                    var genItemInfo = new GeneratedItemInfo();
                     try
                     {
+
+                        genItemInfo.OriginalItemPath = pathToModel;
+                        genItemInfo.Position = anchoredItem.AbsolutePositionInMap;
+                        genItemInfo.PitchYawRoll = anchoredItem.PitchYawRoll;
+
                         var originalItem = Gbx.Parse<CGameItemModel>(pathToModel);
 
 
                         ComponentRegistry.InfoOutput.WriteLine($"Generating animation data for item: {newItemId}");
-                        GenerateAnimations(originalItem, correspondingItem);
+                        bool wasAnimationGenerated = GenerateAnimations(originalItem, correspondingItem, genItemInfo, anchoredItem);
 
-                        string exportFolder = Settings.GeneratedItemsFolder;
+                        string exportFolder = Path.GetDirectoryName(exportFileName);
                         if (!Directory.Exists(exportFolder))
                         {
                             ComponentRegistry.InfoOutput.WriteLine($"Directory for generated items does not exist! Creating one.");
@@ -180,13 +219,19 @@ namespace MovingTrackGenerator.Generation
                         itemsToRemove.Add(anchoredItem);
                         itemsToAdd.Add((newItemId, anchoredItem.AbsolutePositionInMap, anchoredItem.PitchYawRoll));
                         generatedItemCount++;
-                        blockStatus[correspondingItem.id] = BlockStatus.Updated;
+
+                        blockStatus[correspondingItem.id] = wasAnimationGenerated ? BlockStatus.Updated : BlockStatus.Original;
+
+                        genItemInfo.BlockStatus = wasAnimationGenerated ? BlockStatus.Updated : BlockStatus.Original;
                     }
                     catch(KeyNotFoundException k)
                     {
                         ComponentRegistry.InfoOutput.Error($"A variable could not be resolved. Skipping item: {model.Id} at position: {anchoredItem.AbsolutePositionInMap}");
                         blockStatus[correspondingItem.id] = BlockStatus.Problem;
+                        genItemInfo.BlockStatus = BlockStatus.Problem;
                     }
+                    genInfo.GeneratedItems.Add(genItemInfo);
+
                 }
                 ComponentRegistry.InfoOutput.WriteLine($"Replacing Items with generated ones...");
                 ComponentRegistry.InfoOutput.WriteLine($"Removing original items.");
@@ -203,7 +248,9 @@ namespace MovingTrackGenerator.Generation
             catch (Exception e)
             {
                 ComponentRegistry.InfoOutput.Error($"Unexpected error while generating map: {e.Message}");
+                genInfo.WasGenerationFaulty = true;
             }
+
             Generated?.Invoke(blockStatus, _generated);
 
         }
@@ -224,33 +271,97 @@ namespace MovingTrackGenerator.Generation
             return null;
         }
 
-        void GenerateAnimations(Gbx<CGameItemModel> itemModel, BlockData blockData)
+        public CPlugDynaObjectModel FindDynaObjectModel(CGameItemModel itemModel, out EntRef entRef)
+        {
+
+            var entityModel = itemModel.EntityModel as CPlugPrefab;
+            var ents = entityModel.Ents.ToList();
+            foreach (var ent in ents)
+            {
+                if (ent.Model is CPlugDynaObjectModel c)
+                {
+                    entRef = ent;
+                    return c;
+                }
+            }
+            entRef = null;
+            return null;
+        }
+        public static Vector3 Rotate(Vector3 position, Vector3 pitchYawRoll)
+        {
+
+            // Create quaternion from pitch, yaw, and roll (Euler Angles)
+            var rotationQuat = Quaternion.CreateFromYawPitchRoll(pitchYawRoll.X, pitchYawRoll.Y, pitchYawRoll.Z);
+
+            // Apply rotation to position (multiply vector by quaternion)
+            Vector3 rotatedPosition = Vector3.Transform(position, rotationQuat);
+
+            return rotatedPosition;
+        }
+
+        void SetAnchorRotationForItemModel(CGameCtnAnchoredObject anchoredItem, Gbx<CGameItemModel> itemModel)
+        {
+            var originalDynaObjectModel = FindDynaObjectModel(itemModel, out var dynaEnt);
+            // TODO: maybe copy?
+            Vec3 pitchYawRoll = anchoredItem.PitchYawRoll;
+            //TODO: Pitch and Yaw are swapped?
+            //pitchYawRoll = (pitchYawRoll.Y, pitchYawRoll.X, pitchYawRoll.Z);
+            Vec3 position = anchoredItem.AbsolutePositionInMap;
+            if (pitchYawRoll == (0,0,0))
+            {
+                return;
+            }
+            var mesh = originalDynaObjectModel.Mesh;
+
+            foreach (CPlugVisualIndexedTriangles visual in mesh.Visuals)
+            {
+                for (int i = 0; i < visual.VertexStreams[0].Positions.Length; ++i)
+                {
+                    Vec3 p = visual.VertexStreams[0].Positions[i];
+                    Vec3 rotated = Rotate(p, pitchYawRoll);
+                    //Vec3 translated = rotated - position;
+                    visual.VertexStreams[0].Positions[i] = rotated;
+                }
+            }
+            anchoredItem.PitchYawRoll = (0, 0, 0);
+            //anchoredItem.AbsolutePositionInMap = (0,0,0);
+        }
+
+        bool GenerateAnimations(Gbx<CGameItemModel> itemModel, BlockData blockData, GeneratedItemInfo genItemInfo, CGameCtnAnchoredObject anchoredItem)
         {
             var originalKinemConstraint = FindKinematicConstraint(itemModel, out var entRef);
             if(originalKinemConstraint == null || entRef == null)
             {
                 ComponentRegistry.InfoOutput.Warn($"No Kinematic Constraint found! Skipping Animation generation.");
-                return;
+                return false;
             }
             var entityModel = itemModel.Node.EntityModel as CPlugPrefab;
             if(entityModel == null)
             {
                 ComponentRegistry.InfoOutput.Warn($"No EntityModel found! Skipping Animation generation.");
-                return;
+                return false;
             }
             var ents = entityModel.Ents.ToList();
             EntRef entCpy = Utils.CopyEnt(entRef);
             var targetKinematicConstraint = entCpy.Model as NPlugDyna_SKinematicConstraint;
 
-            ApplyAnimations(targetKinematicConstraint, entCpy, blockData);
+            if (!blockData.fullAnimationData.isLocalSpace)
+            {
+                SetAnchorRotationForItemModel(anchoredItem, itemModel);
+            }
+
+            ApplyAnimations(targetKinematicConstraint, entCpy, blockData, genItemInfo);
+
+          
 
             ents.RemoveAt(ents.Count - 1);
             ents.Add(entCpy);
             entityModel.Ents = ents.ToArray();
             itemModel.Node.EntityModel = entityModel;
+            return true;
         }
 
-        void ApplyAnimations(NPlugDyna_SKinematicConstraint kinematicConstraint, EntRef ent, BlockData blockData)
+        void ApplyAnimations(NPlugDyna_SKinematicConstraint kinematicConstraint, EntRef ent, BlockData blockData, GeneratedItemInfo genItemInfo)
         {
             Dictionary<AnimationOptions, float> transValues = new();
             var transData = blockData.fullAnimationData.translationData;
@@ -282,21 +393,49 @@ namespace MovingTrackGenerator.Generation
                     d1 = transData.wait1DurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, transValues);
                     wait1Func_trans.Duration = new TmEssentials.TimeInt32((int)d1);
                     transValues[AnimationOptions.Wait_1] = d1;
+                    genItemInfo.PositionFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Max,
+                        Time = (int)d1,
+                        Value = AddAxisMovement(genItemInfo.Position, kinematicConstraint.TransMax, kinematicConstraint.TransAxis),
+                        Easing = wait1Func_trans.Ease,
+                    });
 
                     flyInFunc_trans.Reverse = true;
                     d2 = transData.flyInDurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, transValues);
                     flyInFunc_trans.Duration = new TmEssentials.TimeInt32((int)d2);
                     transValues[AnimationOptions.FlyIn] = d2;
+                    genItemInfo.PositionFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Min,
+                        Time = (int)d1 + (int)d2,
+                        Value = genItemInfo.Position,
+                        Easing = flyInFunc_trans.Ease,
+                    });
 
                     wait2Func_trans.Reverse = false;
                     d3 = transData.wait2DurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, transValues);
                     wait2Func_trans.Duration = new TmEssentials.TimeInt32((int)d3);
                     transValues[AnimationOptions.Wait_2] = d3;
+                    genItemInfo.PositionFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Min,
+                        Time = (int)d1 + (int)d2 + (int)d3,
+                        Value = genItemInfo.Position,
+                        Easing = wait2Func_trans.Ease,
+                    });
 
                     flyoutFunc_trans.Reverse = false;
                     d4 = transData.flyOutDurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, transValues);
                     flyoutFunc_trans.Duration = new TmEssentials.TimeInt32((int)d4);
                     transValues[AnimationOptions.FlyOut] = d4;
+                    genItemInfo.PositionFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Max,
+                        Time = (int)d1 + (int)d2 + (int)d3 + (int)d4,
+                        Value = AddAxisMovement(genItemInfo.Position, kinematicConstraint.TransMax, kinematicConstraint.TransAxis),
+                        Easing = flyoutFunc_trans.Ease,
+                    });
 
                     kinematicConstraint.TransAnimFunc = new AnimFunc()
                     {
@@ -311,20 +450,51 @@ namespace MovingTrackGenerator.Generation
                     wait1Func_trans.Duration = new TmEssentials.TimeInt32((int)d1);
                     transValues[AnimationOptions.Wait_1] = d1;
 
+                    genItemInfo.PositionFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Min,
+                        Time = (int)d1,
+                        Value = genItemInfo.Position,
+                        Easing = wait1Func_trans.Ease,
+                    });
+
                     flyoutFunc_trans.Reverse = false;
                     d4 = transData.flyOutDurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, transValues);
                     flyoutFunc_trans.Duration = new TmEssentials.TimeInt32((int)d4);
                     transValues[AnimationOptions.FlyOut] = d4;
+
+                    genItemInfo.PositionFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Max,
+                        Time = (int)d1 + (int)d4,
+                        Value = AddAxisMovement(genItemInfo.Position, kinematicConstraint.TransMax, kinematicConstraint.TransAxis),
+                        Easing = flyoutFunc_trans.Ease,
+                    });
 
                     wait2Func_trans.Reverse = true;
                     d3 = transData.wait2DurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, transValues);
                     wait2Func_trans.Duration = new TmEssentials.TimeInt32((int)d3);
                     transValues[AnimationOptions.Wait_2] = d3;
 
+                    genItemInfo.PositionFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Max,
+                        Time = (int)d1 + (int)d4 + (int)d3,
+                        Value = AddAxisMovement(genItemInfo.Position, kinematicConstraint.TransMax, kinematicConstraint.TransAxis),
+                        Easing = wait2Func_trans.Ease,
+                    });
+
                     flyInFunc_trans.Reverse = true;
                     d2 = transData.flyInDurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, transValues);
                     flyInFunc_trans.Duration = new TmEssentials.TimeInt32((int)d2);
                     transValues[AnimationOptions.FlyIn] = d2;
+                    genItemInfo.PositionFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Min,
+                        Time = (int)d1 + (int)d2 + (int)d3 + (int)d4,
+                        Value = genItemInfo.Position,
+                        Easing = flyInFunc_trans.Ease,
+                    });
 
                     kinematicConstraint.TransAnimFunc = new AnimFunc()
                     {
@@ -363,21 +533,49 @@ namespace MovingTrackGenerator.Generation
                     d1 = rotData.wait1DurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, rotValues);
                     wait1Func_rot.Duration = new TmEssentials.TimeInt32((int)d1);
                     rotValues[AnimationOptions.Wait_1] = d1;
+                    genItemInfo.RotationFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Max,
+                        Time = (int)d1,
+                        Value = AddAxisMovement(genItemInfo.PitchYawRoll, kinematicConstraint.AngleMaxDeg, kinematicConstraint.RotAxis),
+                        Easing = wait1Func_rot.Ease,
+                    });
 
                     flyInFunc_rot.Reverse = true;
                     d2 = rotData.flyInDurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, rotValues);
                     flyInFunc_rot.Duration = new TmEssentials.TimeInt32((int)d2);
                     rotValues[AnimationOptions.FlyIn] = d2;
+                    genItemInfo.RotationFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Min,
+                        Time = (int)d1 + (int)d2,
+                        Value = genItemInfo.PitchYawRoll,
+                        Easing = flyInFunc_rot.Ease,
+                    });
 
                     wait2Func_rot.Reverse = false;
                     d3 = rotData.wait2DurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, rotValues);
                     wait2Func_rot.Duration = new TmEssentials.TimeInt32((int)d3);
                     rotValues[AnimationOptions.Wait_2] = d3;
+                    genItemInfo.RotationFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Min,
+                        Time = (int)d1 + (int)d2 + (int)d3,
+                        Value = genItemInfo.PitchYawRoll,
+                        Easing = wait2Func_rot.Ease,
+                    });
 
                     flyoutFunc_rot.Reverse = false;
                     d4 = rotData.flyOutDurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, rotValues);
                     flyoutFunc_rot.Duration = new TmEssentials.TimeInt32((int)d4);
                     rotValues[AnimationOptions.FlyOut] = d4;
+                    genItemInfo.RotationFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Max,
+                        Time = (int)d1 + (int)d2 + (int)d3 + (int)d4,
+                        Value = AddAxisMovement(genItemInfo.PitchYawRoll, kinematicConstraint.AngleMaxDeg, kinematicConstraint.RotAxis),
+                        Easing = flyoutFunc_rot.Ease,
+                    });
 
                     kinematicConstraint.RotAnimFunc = new AnimFunc()
                     {
@@ -390,21 +588,49 @@ namespace MovingTrackGenerator.Generation
                     d1 = rotData.wait1DurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, rotValues);
                     wait1Func_rot.Duration = new TmEssentials.TimeInt32((int)d1);
                     rotValues[AnimationOptions.Wait_1] = d1;
-
-                    flyInFunc_rot.Reverse = true;
-                    d2 = rotData.flyInDurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, rotValues);
-                    flyInFunc_rot.Duration = new TmEssentials.TimeInt32((int)d2);
-                    rotValues[AnimationOptions.FlyIn] = d2;
-
-                    wait2Func_rot.Reverse = true;
-                    d3 = rotData.wait2DurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, rotValues);
-                    wait2Func_rot.Duration = new TmEssentials.TimeInt32((int)d3);
-                    rotValues[AnimationOptions.Wait_2] = d3;
+                    genItemInfo.RotationFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Min,
+                        Time = (int)d1,
+                        Value = genItemInfo.PitchYawRoll,
+                        Easing = wait1Func_rot.Ease,
+                    });
 
                     flyoutFunc_rot.Reverse = false;
                     d4 = rotData.flyOutDurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, rotValues);
                     flyoutFunc_rot.Duration = new TmEssentials.TimeInt32((int)d4);
                     rotValues[AnimationOptions.FlyOut] = d4;
+                    genItemInfo.RotationFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Max,
+                        Time = (int)d1 + (int)d4,
+                        Value = AddAxisMovement(genItemInfo.PitchYawRoll, kinematicConstraint.AngleMaxDeg, kinematicConstraint.RotAxis),
+                        Easing = flyoutFunc_rot.Ease,
+                    });
+
+                    wait2Func_rot.Reverse = true;
+                    d3 = rotData.wait2DurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, rotValues);
+                    wait2Func_rot.Duration = new TmEssentials.TimeInt32((int)d3);
+                    rotValues[AnimationOptions.Wait_2] = d3;
+                    genItemInfo.RotationFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Max,
+                        Time = (int)d1 + (int)d4 + (int)d3,
+                        Value = AddAxisMovement(genItemInfo.PitchYawRoll, kinematicConstraint.AngleMaxDeg, kinematicConstraint.RotAxis),
+                        Easing = wait2Func_rot.Ease,
+                    });
+
+                    flyInFunc_rot.Reverse = true;
+                    d2 = rotData.flyInDurationFormula.Resolve(blockData.playerArrivalTime, ValueType.Int, MapData.IntVarDeclarations, rotValues);
+                    flyInFunc_rot.Duration = new TmEssentials.TimeInt32((int)d2);
+                    rotValues[AnimationOptions.FlyIn] = d2;
+                    genItemInfo.RotationFrames.Add(new AnimKeyFrameInfo()
+                    {
+                        Target = KeyFrameTarget.Min,
+                        Time = (int)d1 + (int)d4 + (int)d3 + (int)d2,
+                        Value = genItemInfo.PitchYawRoll,
+                        Easing = flyInFunc_rot.Ease,
+                    });
 
                     kinematicConstraint.RotAnimFunc = new AnimFunc()
                     {
@@ -428,5 +654,32 @@ namespace MovingTrackGenerator.Generation
             return (axis, avoidArrivalAxis);
         }
 
+        Vec3 AddAxisMovement(Vec3 initPos, float distance, EAxis axis) => axis switch
+        {
+            EAxis.X => initPos + (distance, 0, 0),
+            EAxis.Y => initPos + (0, distance, 0),
+            EAxis.Z => initPos + (0, 0, distance),
+        };
+
+
+        public void SaveGenerationInfo(GenerationInfo genInfo)
+        {
+            if (!Settings.IsGenerationInfoExportEnabled)
+                return;
+            var exportFolder = Settings.GenerationInfoExportFolder;
+            var exportFileName = Path.Combine(exportFolder, SanitizeFullPath($"{genInfo.GeneratedMapName}_genInfo.json"));
+            try
+            {
+                ComponentRegistry.InfoOutput.WriteLine($"Writing Generation Info to {exportFileName}");
+                if (!Directory.Exists(exportFolder))
+                {
+                    Directory.CreateDirectory(exportFolder);
+                }
+                File.WriteAllText(exportFileName, JsonSerializer.Serialize(genInfo, new JsonSerializerOptions() { WriteIndented = true }));
+            }catch(Exception e)
+            {
+                ComponentRegistry.InfoOutput.Error($"Error while writing Generation Infos: {e.Message}");
+            }
+        }
     }
 }

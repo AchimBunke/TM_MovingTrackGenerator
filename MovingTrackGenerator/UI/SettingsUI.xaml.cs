@@ -62,7 +62,15 @@ namespace MovingTrackGenerator.UI
                 Settings.GeneratedMapsFolder = f;
             }
         }
-  
+        private void Button_Click6(object sender, System.Windows.RoutedEventArgs e)
+        {
+            var f = OpenFileDialog(@"C:\");
+            if (!string.IsNullOrEmpty(f))
+            {
+                Settings.GenerationInfoExportFolder = f;
+            }
+        }
+
 
     }
 }

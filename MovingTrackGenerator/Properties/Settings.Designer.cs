@@ -118,5 +118,29 @@ namespace MovingTrackGenerator.Properties {
                 this["GeneratedMapsFolder"] = value;
             }
         }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("")]
+        public string GenerationInfoExportFolder {
+            get {
+                return ((string)(this["GenerationInfoExportFolder"]));
+            }
+            set {
+                this["GenerationInfoExportFolder"] = value;
+            }
+        }
+        
+        [global::System.Configuration.UserScopedSettingAttribute()]
+        [global::System.Diagnostics.DebuggerNonUserCodeAttribute()]
+        [global::System.Configuration.DefaultSettingValueAttribute("False")]
+        public bool IsGenerationInfoExportEnabled {
+            get {
+                return ((bool)(this["IsGenerationInfoExportEnabled"]));
+            }
+            set {
+                this["IsGenerationInfoExportEnabled"] = value;
+            }
+        }
     }
 }

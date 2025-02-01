@@ -402,3 +402,6 @@ FodyWeavers.xsd
 /Mapping
 /TM_ItemScripting
 /TM_MediaTrackerScripting
+/TM_3DTrianglesAnimatior
+/TM_MovingItemConverter
+Triangle3DAnimation/
