@@ -105,10 +105,10 @@ In this example:
   - Initially i wait until 2 seconds before the player arrives (2 seconds from *moveTime* because the block needs time to move in position).
   - The move to initial position in 2 seconds.
   - Then wait between 1 and 3 seconds.
-  - Then animate back to *Max* translation using the same time as used in FlyIn.
+  - Then animate back to *Max* translation using the same time as used in FlyIn.  
 For Rotation I copied the values and just adjusted the Max value as it is a value of degrees.
 13. Copy this settings to all other instances of this Item Model.
-14. Under *Save/Load* these map-dependant settings can be saved. This will create a meta file next to the map file.  
+14. Under *Save/Load* these map-dependant settings can be saved. This will create a meta file in the plugin's storage folder.  
 ![image](https://github.com/user-attachments/assets/f3f9eaf3-4276-440d-b24a-81c4aafa6b46)  
 15. Start the **Moving Track Generator** from the unzipped directory.   
 ![image](https://github.com/user-attachments/assets/b26487b9-4f8e-4334-b17c-41c562139924)  
