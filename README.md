@@ -149,9 +149,7 @@ This way, the configuration can easily be copied to all objects (marking objects
 - 
 # TODO
 
-- Fully disable plugin outside of Editor
 - Add more sub-animation templates. (E.g. FlyIn -> FlyOut -> FlyIn -> FlyOut)
-- Item grouping for selection and copy/paste of animation settings.
 - Incremental generation from the same map. (instead of generating a new map, load and modify already existing generated map)
 - Better arrival route tracking. (E.g. integration of EditorRoute plugin)
 - Evaluate different schema for sub-animations (different from FlyIn, Wait, FlyOut) for more intuitive control.
@@ -159,6 +157,7 @@ This way, the configuration can easily be copied to all objects (marking objects
 - Preview of generated animations in Configurator and Generator). (display of translation path and rotation as e.g. bounding volume to check for intersection with other items/route)
 - Make layout for animation configuration more intuitive.
 - Merge generator and configurator into standalone plugin.
+- Fix AABB with rotated items
 
 
  
