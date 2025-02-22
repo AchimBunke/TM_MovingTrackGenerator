@@ -159,6 +159,7 @@ This way, the configuration can easily be copied to all objects (marking objects
 - Merge generator and configurator into standalone plugin.
 - Fix AABB with rotated items
 - Make Local Space naimation the default as Global Space has problems with colliders
+- Optimize filesize by reusing items with identical animation properties
 
 
  
