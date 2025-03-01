@@ -172,6 +172,7 @@ namespace MovingTrackGenerator.Generation
 
                 List<CGameCtnAnchoredObject> itemsToRemove = new(); // replaced by generated items
                 List<(string itemPath, GBX.NET.Vec3 position, GBX.NET.Vec3 pitchYawRoll)> itemsToAdd = new(); // replacements
+                Dictionary<string, (BlockData data, string originalItem)> generatedItems = new();
 
                 foreach (var anchoredItem in currentMap.AnchoredObjects)
                 {
@@ -202,27 +203,40 @@ namespace MovingTrackGenerator.Generation
 
 
                         ComponentRegistry.InfoOutput.WriteLine($"Generating animation data for item: {newItemId}");
-                        bool wasAnimationGenerated = GenerateAnimations(originalItem, correspondingItem, genItemInfo, anchoredItem);
 
-                        string exportFolder = Path.GetDirectoryName(exportFileName);
-                        if (!Directory.Exists(exportFolder))
+                        if (generatedItems.Any(b => b.Value.data.fullAnimationData.Equals(correspondingItem.fullAnimationData) &&
+                             b.Value.originalItem == anchoredItem.ItemModel.Id))// Deduplication
                         {
-                            ComponentRegistry.InfoOutput.WriteLine($"Directory for generated items does not exist! Creating one.");
-                            Directory.CreateDirectory(exportFolder);
+                            var identicalItem = generatedItems.First(b => b.Value.data.fullAnimationData.Equals(correspondingItem.fullAnimationData) &&
+                             b.Value.originalItem == anchoredItem.ItemModel.Id);
+                            ComponentRegistry.InfoOutput.WriteLine($"Animation was already generated, reusing item: {identicalItem.Key}");
+                            newItemId = identicalItem.Key;
+                            blockStatus[correspondingItem.id] = BlockStatus.Identical;
+                            genItemInfo.BlockStatus = BlockStatus.Identical;
                         }
+                        else
+                        {
+
+                            bool wasAnimationGenerated = GenerateAnimations(originalItem, correspondingItem, genItemInfo, anchoredItem);
+
+                            string exportFolder = Path.GetDirectoryName(exportFileName);
+                            if (!Directory.Exists(exportFolder))
+                            {
+                                ComponentRegistry.InfoOutput.WriteLine($"Directory for generated items does not exist! Creating one.");
+                                Directory.CreateDirectory(exportFolder);
+                            }
 
 
-                        ComponentRegistry.InfoOutput.WriteLine($"Saving generated item at: {exportFileName}");
-                        originalItem.Save(exportFileName);
-
-
+                            ComponentRegistry.InfoOutput.WriteLine($"Saving generated item at: {exportFileName}");
+                            originalItem.Save(exportFileName);
+                            blockStatus[correspondingItem.id] = wasAnimationGenerated ? BlockStatus.Updated : BlockStatus.Original;
+                            genItemInfo.BlockStatus = wasAnimationGenerated ? BlockStatus.Updated : BlockStatus.Original;
+                            generatedItems.Add(newItemId, (correspondingItem, anchoredItem.ItemModel.Id));
+                            generatedItemCount++;
+                        }
                         itemsToRemove.Add(anchoredItem);
                         itemsToAdd.Add((newItemId, anchoredItem.AbsolutePositionInMap, anchoredItem.PitchYawRoll));
-                        generatedItemCount++;
-
-                        blockStatus[correspondingItem.id] = wasAnimationGenerated ? BlockStatus.Updated : BlockStatus.Original;
-
-                        genItemInfo.BlockStatus = wasAnimationGenerated ? BlockStatus.Updated : BlockStatus.Original;
+                       
                     }
                     catch(KeyNotFoundException k)
                     {
@@ -242,7 +256,7 @@ namespace MovingTrackGenerator.Generation
                     currentMap.PlaceAnchoredObject(new Ident(item.itemPath, 26, Settings.Author), item.position, item.pitchYawRoll);
                 }
 
-                ComponentRegistry.InfoOutput.Highlight($"-- Completed Generation -- Replaced: {generatedItemCount} items -- ");
+                ComponentRegistry.InfoOutput.Highlight($"-- Completed Generation -- Replaced: {itemsToAdd.Count} items -- ");
                 _generated = true;
             }
             catch (Exception e)

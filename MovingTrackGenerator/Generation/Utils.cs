@@ -94,5 +94,6 @@ namespace MovingTrackGenerator.Generation
         Original,
         Problem,
         Updated,
+        Identical
     }
 }

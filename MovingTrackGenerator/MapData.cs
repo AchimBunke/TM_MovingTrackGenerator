@@ -1,5 +1,6 @@
 ﻿using Microsoft.VisualBasic;
 using MovingTrackGenerator.Generation;
+using System.Diagnostics.CodeAnalysis;
 using System.Numerics;
 using System.Text.Json;
 using System.Text.Json.Serialization;
@@ -121,6 +122,7 @@ namespace MovingTrackGenerator
         public BlockAnimationData fullAnimationData { get; set; }
 
 
+
     }
     public enum MathOperator
     {
@@ -191,6 +193,18 @@ namespace MovingTrackGenerator
         public AnimationData translationData { get; set; }
         public AnimationData rotationData { get; set; }
         public bool isLocalSpace { get; set; }
+
+        public override bool Equals([NotNullWhen(true)] object? obj)
+        {
+            if (isLocalSpace)
+            {
+                return base.Equals(obj);
+            }
+            else
+            {
+                return false;
+            }
+        }
     }
     public struct AnimationData
     {

@@ -186,6 +186,7 @@ namespace MovingTrackGenerator.UI
             BlockStatus.Original => Brushes.Red,
             BlockStatus.Problem => Brushes.Orange,
             BlockStatus.Updated => Brushes.Green,
+            BlockStatus.Identical => Brushes.Magenta,
         };
         void AddChild(UIElement child, Vec3 pos, Vec3 centerOffset)
         {
